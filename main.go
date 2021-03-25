@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
@@ -67,12 +68,6 @@ func main() {
 
 	app.Get("/ws", websocket.New(func(c *websocket.Conn) {
 
-		result := Supreme()
-		out, err := json.Marshal(result)
-		if err != nil {
-			panic(err)
-		}
-
 		// When the function returns, unregister the client and close the connection
 		defer func() {
 			unregister <- c
@@ -83,22 +78,36 @@ func main() {
 		register <- c
 
 		for {
-			messageType, message, err := c.ReadMessage()
-			if err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					log.Println("read error:", err)
+
+			//var result []DikaCourt
+			count := 0
+			for range time.Tick(time.Second * 1) {
+				count++
+				result := Supreme()
+
+				_, err := json.Marshal(result)
+				if err != nil {
+					panic(err)
 				}
+				messageType, _, err := c.ReadMessage()
+				if err != nil {
+					if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+						log.Println("read error:", err)
+					}
 
-				return // Calls the deferred function, i.e. closes the connection on error
+					return // Calls the deferred function, i.e. closes the connection on error
+				}
+				log.Println(count)
+				if messageType == websocket.TextMessage {
+					// Broadcast the received message
+					// broadcast <- string(string(message))
+					// broadcast <- string(string(out))
+					broadcast <- string(string(count))
+				} else {
+					log.Println("websocket message received of type", messageType)
+				}
 			}
 
-			if messageType == websocket.TextMessage {
-				// Broadcast the received message
-				broadcast <- string(string(message))
-				broadcast <- string(string(out))
-			} else {
-				log.Println("websocket message received of type", messageType)
-			}
 		}
 	}))
 
