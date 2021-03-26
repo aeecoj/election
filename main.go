@@ -80,32 +80,35 @@ func main() {
 		for {
 
 			//var result []DikaCourt
-			count := 0
-			for range time.Tick(time.Second * 1) {
-				count++
-				result := Supreme()
 
-				_, err := json.Marshal(result)
+			// messageType, _, err := c.ReadMessage()
+			// if err != nil {
+			// 	if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			// 		log.Println("read error:", err)
+			// 	}
+
+			// 	return // Calls the deferred function, i.e. closes the connection on error
+			// }
+			// log.Println(count)
+			// if messageType == websocket.TextMessage {
+			// 	// Broadcast the received message
+			// 	// broadcast <- string(string(message))
+			// 	// broadcast <- string(string(out))
+			// 	broadcast <- string(string(count))
+			// } else {
+			// 	log.Println("websocket message received of type", messageType)
+			// }
+
+			//count := 0
+			for range time.Tick(time.Second * 10) {
+				//count++
+				result := Supreme()
+				resultByte, err := json.Marshal(result)
 				if err != nil {
 					panic(err)
 				}
-				messageType, _, err := c.ReadMessage()
-				if err != nil {
-					if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-						log.Println("read error:", err)
-					}
+				broadcast <- string(resultByte)
 
-					return // Calls the deferred function, i.e. closes the connection on error
-				}
-				log.Println(count)
-				if messageType == websocket.TextMessage {
-					// Broadcast the received message
-					// broadcast <- string(string(message))
-					// broadcast <- string(string(out))
-					broadcast <- string(string(count))
-				} else {
-					log.Println("websocket message received of type", messageType)
-				}
 			}
 
 		}
@@ -117,11 +120,12 @@ func main() {
 }
 
 type DikaCourt struct {
-	DNum  string `json:"d_num"`
-	Pname string `json:"p_num"`
-	Fname string `json:"f_num"`
-	Lname string `json:"l_num"`
-	Votes int    `json:"votes"`
+	DNum         string `json:"d_num"`
+	Pname        string `json:"p_num"`
+	Fname        string `json:"f_num"`
+	Lname        string `json:"l_num"`
+	Votes        int    `json:"votes"`
+	ResponseTime string `json:"response_time"`
 }
 
 func Supreme() []DikaCourt {
@@ -139,7 +143,7 @@ func Supreme() []DikaCourt {
 	defer db.Close()
 
 	// Execute the query
-	results, err := db.Query("SELECT D_num,Pname,Fname, Lname, votes FROM dika_court ORDER BY votes DESC")
+	results, err := db.Query("SELECT D_num,Pname,Fname, Lname, votes FROM dika_court ORDER BY votes DESC LIMIT 2")
 	if err != nil {
 		panic(err.Error()) // proper error handling instead of panic in your app
 	}
@@ -155,6 +159,7 @@ func Supreme() []DikaCourt {
 		// and then print out the tag's Name attribute
 		//log.Printf(dikaCourt.DNum, dikaCourt.Pname, dikaCourt.Fname, dikaCourt.Lname, dikaCourt.Votes)
 
+		dikaCourt.ResponseTime = time.Now().String()
 		dikaCourtList = append(dikaCourtList, dikaCourt)
 	}
 
